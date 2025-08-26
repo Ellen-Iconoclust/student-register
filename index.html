@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Rural School — Smart Attendance (Full Seeded)</title>
+<meta name="description" content="Offline-first attendance system for rural schools. Fully seeded classes and students, auto-absent cutoff, dark/light mode." />
+<style>
+  :root{ --bg:#0f1724; --panel:#071026; --muted:#9aa8d6; --accent:#7c3aed; --accent-2:#b388ff; --glass:rgba(255,255,255,0.04); --success:#16a34a; --danger:#ef4444; --radius:12px; --shadow:0 8px 30px rgba(2,6,23,0.6); font-family:Inter,system-ui,Arial; }
+  [data-theme='light']{ --bg:#f6f8fb; --panel:#ffffff; --muted:#4b5563; --accent:#6b21a8; --accent-2:#9f7aea; --glass:rgba(2,6,23,0.03); }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg) 0%, #07122b 60%); color:var(--muted,#e6eef8)}
+  .container{max-width:1200px;margin:20px auto;padding:18px}
+  header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:grid;place-items:center;font-weight:800;color:#fff}
+  h1{margin:0;font-size:20px}
+  .lead{margin:0;color:var(--muted);font-size:13px}
+  .top-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .icon-btn{padding:8px;border-radius:10px;border:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));color:white;cursor:pointer}
+  .mode-toggle{padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--muted);cursor:pointer}
+  .grid{display:grid;grid-template-columns:380px 1fr;gap:18px}@media(max-width:980px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border-radius:12px;padding:14px;box-shadow:var(--shadow);border:1px solid rgba(255,255,255,0.03)}
+  .search{display:flex;gap:8px;align-items:center;padding:10px;border-radius:12px;background:linear-gradient(90deg, rgba(124,58,237,0.12), rgba(179,136,255,0.04));border:1px solid rgba(124,58,237,0.2);}
+  .search input{flex:1;background:transparent;border:0;color:var(--muted);font-weight:700;padding:8px;outline:none}
+  .form{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+  .form input,.form select{padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:var(--glass);color:inherit;outline:none}
+  .row{display:flex;gap:8px}
+  .btn{padding:10px 12px;border-radius:10px;border:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#fff;font-weight:700;cursor:pointer}
+  .btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+  .students{margin-top:12px;display:flex;flex-direction:column;gap:8px;max-height:540px;overflow:auto;padding-right:6px}
+  .student{display:flex;align-items:center;gap:12px;padding:10px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));border:1px solid rgba(255,255,255,0.02);cursor:pointer;transition:transform .12s}
+  .student:hover{transform:translateY(-6px)}
+  .avatar{width:46px;height:46px;border-radius:10px;background:linear-gradient(135deg,#ffd7d7,#ffd1e8);display:grid;place-items:center;color:#071022;font-weight:800}
+  .smeta{display:flex;flex-direction:column}
+  .sname{font-weight:700}
+  .sid{font-size:12px;color:var(--muted)}
+  .calendar{margin-top:12px;background:var(--glass);padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.02)}
+  .week{display:flex;gap:6px;align-items:center}
+  .day{flex:1;padding:8px 10px;border-radius:8px;text-align:center;font-weight:700;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);cursor:pointer}
+  .day.active{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#071022}
+  .stats{display:flex;gap:12px;margin-top:12px}
+  .stat{flex:1;padding:12px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.02);text-align:center}
+  .attendance{margin-top:14px;display:grid;grid-template-columns:1fr 160px;gap:12px}
+  .attendance .list{display:flex;flex-direction:column;gap:8px;max-height:360px;overflow:auto}
+  .presentBtn,.absentBtn{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,0.06);display:grid;place-items:center;cursor:pointer}
+  .presentBtn{background:linear-gradient(90deg, rgba(34,197,94,0.12), rgba(255,255,255,0.01));color:var(--success);font-weight:800}
+  .presentBtn.disabled{opacity:0.5;cursor:not-allowed}
+  .absentBtn{background:linear-gradient(90deg, rgba(239,68,68,0.06), rgba(255,255,255,0.01));color:var(--danger);font-weight:800}
+  .modal{position:fixed;inset:0;display:grid;place-items:center;background:linear-gradient(180deg, rgba(2,6,23,0.6), rgba(2,6,23,0.7));backdrop-filter:blur(4px)}
+  .dialog{background:var(--panel);padding:20px;border-radius:12px;max-width:680px;width:94%;border:1px solid rgba(255,255,255,0.04)}
+  .bars{display:flex;gap:6px;height:84px;align-items:end;margin-top:12px}
+  .bar{flex:1;border-radius:6px;background:linear-gradient(180deg,var(--accent-2),var(--accent));transform-origin:bottom;transition:height .3s}
+  footer{margin-top:18px;color:var(--muted);font-size:12px;text-align:center}
+</style>
+</head>
+<body data-theme="dark">
+<div class="container">
+  <header>
+    <div style="display:flex;gap:12px;align-items:center">
+      <div class="logo">📚</div>
+      <div>
+        <h1>Rural School — Smart Attendance (Full Seeded)</h1>
+        <p class="lead">Includes 10 classes and 55 students per class (seeded). Auto-absent cutoff, circular present/absent, dark/light.</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="modeToggle" class="mode-toggle">Toggle Light/Dark</button>
+      <button id="exportBtnTop" class="icon-btn">Export</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <aside class="panel">
+      <div class="search">
+        <span>📕</span>
+        <input id="globalSearch" placeholder="Search students, reg or class… ✨" />
+        <span>🧡📚</span>
+      </div>
+
+      <form id="registerForm" class="form" onsubmit="return false;">
+        <div class="row">
+          <input id="nameInput" placeholder="Student name (e.g., Rani)" />
+          <input id="regInput" placeholder="Reg no (e.g., C1-0001)" />
+        </div>
+        <div class="row">
+          <select id="classSelect"></select>
+          <button id="addBtn" class="btn">Register</button>
+        </div>
+      </form>
+
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button id="exportBtn" class="btn secondary">Export JSON</button>
+        <button id="importBtn" class="btn secondary">Import JSON</button>
+      </div>
+
+      <div class="students" id="studentsList" aria-live="polite"></div>
+    </aside>
+
+    <main>
+      <div class="panel">
+        <div class="toolbar" style="display:flex;justify-content:space-between;align-items:center">
+          <div style="display:flex;gap:8px;align-items:center"><strong>Week:</strong><div id="weekLabel" class="muted">This week</div></div>
+          <div><button id="prevWeek" class="btn secondary">◀ Prev</button> <button id="nextWeek" class="btn secondary">Next ▶</button></div>
+        </div>
+
+        <div class="calendar" id="calendar"><div class="week" id="daysRow"></div></div>
+
+        <div class="stats"><div class="stat"><h3 id="presentCount">0</h3><p>Present (this week)</p></div><div class="stat"><h3 id="absentCount">0</h3><p>Absent (this week)</p></div><div class="stat"><h3 id="totalStudents">0</h3><p>Total students</p></div></div>
+
+        <div class="attendance"><div class="list" id="attendanceList"></div>
+          <div>
+            <div style="font-weight:700;margin-bottom:8px">Quick actions</div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <button id="markAllPresent" class="btn">Mark all present</button>
+              <button id="markAllAbsent" class="btn secondary">Mark all absent</button>
+              <button id="clearToday" class="btn secondary">Clear today's</button>
+              <div style="margin-top:12px">
+                <label class="muted">Auto-absent cutoff (HH:MM)</label>
+                <input id="cutoffInput" type="time" value="09:00" style="width:100%;margin-top:6px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--muted)" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-weight:800">Weekly attendance (last 7 days)</div><div class="muted">Hover bars to see counts</div></div><div class="bars" id="bars"></div></div>
+      </div>
+      <footer>Built for rural schools — Offline-first. Data stored in browser localStorage.</footer>
+    </main>
+  </div>
+</div>
+
+<div id="modalRoot" style="display:none"></div>
+
+<script>
+/* ---------- Full seeded initial data ---------- */
+// We'll create 10 classes (C1..C10) with 55 students each. Names are generated but unique.
+function makeSeededStudents(){
+  const students = {};
+  for(let c=1;c<=10;c++){
+    const cls = 'C'+c;
+    for(let i=1;i<=55;i++){
+      const id = 's_'+cls+'_'+String(i).padStart(3,'0')+'_'+Math.random().toString(36).slice(2,6);
+      const reg = `${cls}-${String(i).padStart(4,'0')}`;
+      const name = `${className(c)} Student ${String(i).padStart(3,'0')}`;
+      students[id] = { id, name, reg, class: cls };
+    }
+  }
+  return students;
+}
+function className(n){ // friendly names for classes if desired
+  const names = ['Sunflower','River','Hills','Meadow','Forest','Ocean','Valley','Prairie','Lotus','Mango'];
+  return names[(n-1)%names.length];
+}
+
+/* ---------- Data model ---------- */
+const STORAGE_KEY = 'rural_attendance_fullseed_v1';
+let state = { students: {}, attendance: {}, weekOffset:0, cutoff: '09:00' };
+
+function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function loadState(){ try{ const raw = localStorage.getItem(STORAGE_KEY); if(raw) state = JSON.parse(raw); }catch(e){ console.warn('load fail', e); } }
+
+function formatDate(d){ return d.toISOString().slice(0,10); }
+function startOfWeekDate(weekOffset=0){ const now=new Date(); const day=(now.getDay()+6)%7; const monday=new Date(now); monday.setDate(now.getDate()-day + weekOffset*7); monday.setHours(0,0,0,0); return monday; }
+function uid(){ return 's_'+Math.random().toString(36).slice(2,9); }
+
+/* ---------- UI refs ---------- */
+const studentsList = document.getElementById('studentsList');
+const nameInput = document.getElementById('nameInput');
+const regInput = document.getElementById('regInput');
+const classSelect = document.getElementById('classSelect');
+const addBtn = document.getElementById('addBtn');
+const globalSearch = document.getElementById('globalSearch');
+const daysRow = document.getElementById('daysRow');
+const weekLabel = document.getElementById('weekLabel');
+const presentCount = document.getElementById('presentCount');
+const absentCount = document.getElementById('absentCount');
+const totalStudents = document.getElementById('totalStudents');
+const attendanceList = document.getElementById('attendanceList');
+const bars = document.getElementById('bars');
+const modalRoot = document.getElementById('modalRoot');
+const markAllPresent = document.getElementById('markAllPresent');
+const markAllAbsent = document.getElementById('markAllAbsent');
+const clearToday = document.getElementById('clearToday');
+const exportBtn = document.getElementById('exportBtn');
+const importBtn = document.getElementById('importBtn');
+const prevWeek = document.getElementById('prevWeek');
+const nextWeek = document.getElementById('nextWeek');
+const cutoffInput = document.getElementById('cutoffInput');
+const modeToggle = document.getElementById('modeToggle');
+const exportBtnTop = document.getElementById('exportBtnTop');
+
+/* ---------- Initialization ---------- */
+loadState();
+// populate class dropdown
+for(let c=1;c<=10;c++){ const opt=document.createElement('option'); opt.value='C'+c; opt.textContent='Class '+c; classSelect.appendChild(opt); }
+// If there are no students in storage, write seeded students and some sample attendance
+if(Object.keys(state.students).length===0){ state.students = makeSeededStudents(); // seed last 7 days randomly
+  for(let i=0;i<7;i++){ const d = formatDate(new Date(Date.now()-i*86400000)); state.attendance[d] = {}; Object.keys(state.students).forEach(sid=>{ state.attendance[d][sid] = Math.random() > 0.35; }); }
+  saveState(); }
+// restore cutoff
+if(state.cutoff) cutoffInput.value = state.cutoff;
+
+renderAll();
+
+/* ---------- Event bindings ---------- */
+addBtn.addEventListener('click', onRegister);
+globalSearch.addEventListener('input', renderStudentsList);
+markAllPresent.addEventListener('click', ()=>{ setAllToday(true); renderAll(); });
+markAllAbsent.addEventListener('click', ()=>{ setAllToday(false); renderAll(); });
+clearToday.addEventListener('click', ()=>{ clearTodayAttendance(); renderAll(); });
+exportBtn.addEventListener('click', ()=>{ download(JSON.stringify(state,null,2),'attendance.json'); });
+exportBtnTop.addEventListener('click', ()=>{ download(JSON.stringify(state,null,2),'attendance.json'); });
+importBtn.addEventListener('click', ()=>{ promptImport(); });
+prevWeek.addEventListener('click', ()=>{ state.weekOffset--; renderAll(); saveState(); });
+nextWeek.addEventListener('click', ()=>{ state.weekOffset++; renderAll(); saveState(); });
+cutoffInput.addEventListener('change', ()=>{ state.cutoff = cutoffInput.value; saveState(); });
+modeToggle.addEventListener('click', toggleTheme);
+
+globalSearch.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ const q=globalSearch.value.trim(); if(!q) return; const found = Object.values(state.students).find(s => s.reg.toLowerCase()===q.toLowerCase()); if(found) showStudentModal(found.id); else renderStudentsList(); } });
+window.addEventListener('keydown',(e)=>{ if(e.key==='/' && document.activeElement!==globalSearch){ e.preventDefault(); globalSearch.focus(); } });
+// auto-absent check every minute
+setInterval(checkAutoAbsent, 60*1000); checkAutoAbsent();
+
+/* ---------- Core functions ---------- */
+function onRegister(){ const name=nameInput.value.trim(); const reg=regInput.value.trim(); const cls=classSelect.value; if(!name||!reg){ alert('Please enter name and reg'); return; } const exists = Object.values(state.students).find(s=>s.reg.toLowerCase()===reg.toLowerCase()); if(exists){ alert('Reg already exists'); return; } const id = uid(); state.students[id] = { id, name, reg, class: cls }; saveState(); nameInput.value=''; regInput.value=''; renderAll(); }
+
+function renderAll(){ renderStudentsList(); renderWeek(); renderAttendanceList(); renderBars(); saveState(); }
+
+function renderStudentsList(){ const q=(globalSearch.value||'').toLowerCase(); studentsList.innerHTML=''; let arr = Object.values(state.students).sort((a,b)=>a.name.localeCompare(b.name)); if(q) arr = arr.filter(s=> s.name.toLowerCase().includes(q) || s.reg.toLowerCase().includes(q) || s.class.toLowerCase().includes(q)); arr.forEach(s=>{ const el=document.createElement('div'); el.className='student'; const avatar=document.createElement('div'); avatar.className='avatar'; avatar.textContent = s.name.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase(); const meta=document.createElement('div'); meta.className='smeta'; const nm=document.createElement('div'); nm.className='sname'; nm.textContent=s.name; const sid=document.createElement('div'); sid.className='sid'; sid.textContent = s.reg + ' • ' + s.class; meta.appendChild(nm); meta.appendChild(sid); el.appendChild(avatar); el.appendChild(meta); el.addEventListener('click', ()=>showStudentModal(s.id)); studentsList.appendChild(el); }); totalStudents.textContent = Object.keys(state.students).length; }
+
+/* Week UI */
+function renderWeek(){ daysRow.innerHTML=''; const monday = startOfWeekDate(state.weekOffset); weekLabel.textContent = `Mon ${formatDate(monday)} — Sun ${formatDate(new Date(monday.getTime()+6*86400000))}`; for(let i=0;i<7;i++){ const d=new Date(monday.getTime()+i*86400000); const str=formatDate(d); const el=document.createElement('div'); el.className='day'; el.textContent = d.toLocaleDateString(undefined,{weekday:'short',day:'numeric'}); el.dataset.date=str; el.addEventListener('click', ()=>{ toggleDayActive(el); }); daysRow.appendChild(el); } const today=formatDate(new Date()); Array.from(daysRow.children).forEach(c=>{ if(c.dataset.date===today) c.classList.add('active'); else c.classList.remove('active'); }); }
+function toggleDayActive(el){ Array.from(daysRow.children).forEach(c=>c.classList.remove('active')); el.classList.add('active'); renderAttendanceList(el.dataset.date); }
+function getActiveDate(){ const active = daysRow.querySelector('.day.active'); return active ? active.dataset.date : formatDate(new Date()); }
+
+/* Attendance rendering & controls */
+function renderAttendanceList(dateStr){ const date = dateStr || getActiveDate(); attendanceList.innerHTML=''; if(!state.attendance[date]) state.attendance[date]={}; const present = Object.values(state.attendance[date]).filter(Boolean).length; const absent = Object.keys(state.students).length - present; presentCount.textContent = present; absentCount.textContent = absent; const arr = Object.values(state.students).sort((a,b)=>a.name.localeCompare(b.name)); arr.forEach(s=>{ const row=document.createElement('div'); row.style.display='flex'; row.style.justifyContent='space-between'; row.style.alignItems='center'; const left=document.createElement('div'); left.style.display='flex'; left.style.alignItems='center'; left.style.gap='8px'; const av=document.createElement('div'); av.className='avatar'; av.style.width='36px'; av.style.height='36px'; av.textContent = s.name.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase(); const meta=document.createElement('div'); const n=document.createElement('div'); n.style.fontWeight='700'; n.textContent=s.name; const r=document.createElement('div'); r.className='muted'; r.textContent = s.reg + ' • ' + s.class; meta.appendChild(n); meta.appendChild(r); left.appendChild(av); left.appendChild(meta);
+    const toggle=document.createElement('div'); toggle.style.display='flex'; toggle.style.gap='8px'; const pBtn=document.createElement('button'); pBtn.className='presentBtn'; pBtn.innerHTML='✔'; const aBtn=document.createElement('button'); aBtn.className='absentBtn'; aBtn.innerHTML='✖'; const val = state.attendance[date].hasOwnProperty(s.id) ? !!state.attendance[date][s.id] : null; if(val===true){ pBtn.classList.add('disabled'); pBtn.disabled=true; } else if(val===false){ aBtn.classList.add('disabled'); aBtn.disabled=true; }
+    pBtn.addEventListener('click', ()=>{ if(pBtn.disabled) return; state.attendance[date][s.id]=true; saveState(); renderAttendanceList(date); renderBars(); });
+    aBtn.addEventListener('click', ()=>{ if(aBtn.disabled) return; state.attendance[date][s.id]=false; saveState(); renderAttendanceList(date); renderBars(); });
+    toggle.appendChild(pBtn); toggle.appendChild(aBtn); row.appendChild(left); row.appendChild(toggle); attendanceList.appendChild(row); }); }
+
+function setAllToday(val){ const date=getActiveDate(); if(!state.attendance[date]) state.attendance[date]={}; Object.keys(state.students).forEach(sid=> state.attendance[date][sid]=!!val ); saveState(); }
+function clearTodayAttendance(){ const date=getActiveDate(); state.attendance[date] = {}; saveState(); }
+
+/* Bars */
+function renderBars(){ bars.innerHTML=''; const monday=startOfWeekDate(state.weekOffset); const counts=[]; for(let i=0;i<7;i++){ const d=new Date(monday.getTime()+i*86400000); const k=formatDate(d); const map=state.attendance[k]||{}; const present=Object.values(map).filter(Boolean).length; counts.push(present); } const max=Math.max(1,...counts); counts.forEach((c,i)=>{ const el=document.createElement('div'); el.className='bar'; el.style.height=(c/max*100)+'%'; el.title = `${c} present on ${formatDate(new Date(monday.getTime()+i*86400000))}`; bars.appendChild(el); }); }
+
+/* Auto-mark absent if past cutoff for today's date (only marks unrecorded students) */
+function checkAutoAbsent(){ try{ state.cutoff = state.cutoff || cutoffInput.value || '09:00'; const [hh,mm] = (state.cutoff||'09:00').split(':').map(x=>parseInt(x,10)||0); const now = new Date(); const todayStr = formatDate(now); const cutoffDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0); if(now >= cutoffDate){ if(!state.attendance[todayStr]) state.attendance[todayStr] = {}; let changed=false; for(const sid of Object.keys(state.students)){ if(!state.attendance[todayStr].hasOwnProperty(sid)){ state.attendance[todayStr][sid]=false; changed=true; } } if(changed){ saveState(); renderAll(); } } }catch(e){ console.error('auto-absent failed', e); } }
+
+/* Student modal */
+function showStudentModal(studentId){ const s=state.students[studentId]; if(!s) return; const days = Object.keys(state.attendance).sort(); let totalDays=0, presentDays=0; for(const d of days){ if(state.attendance[d] && state.attendance[d].hasOwnProperty(studentId)){ totalDays++; if(state.attendance[d][studentId]) presentDays++; } } const pct = totalDays===0 ? 'No records' : Math.round(presentDays/totalDays*100)+'%'; const modal=document.createElement('div'); modal.className='modal'; const dialog=document.createElement('div'); dialog.className='dialog'; dialog.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div style="display:flex;gap:12px;align-items:center"><div style="width:64px;height:64px;border-radius:10px;background:linear-gradient(135deg,#ffd7d7,#ffd1e8);display:grid;place-items:center;color:#071022;font-weight:800">${s.name.split(' ').map(x=>x[0]).slice(0,2).join('')}</div><div><div style="font-weight:800;font-size:18px">${s.name}</div><div class="muted">${s.reg} • ${s.class}</div></div></div><div style="text-align:right"><button id="closeModal" class="btn secondary">Close</button></div></div><hr style="margin:12px 0;border:none;border-top:1px solid rgba(255,255,255,0.03)" /><div style="display:flex;gap:12px;align-items:center"><div style="flex:1"><div style="font-weight:700">Attendance summary</div><div class="muted">Recorded days: ${totalDays}</div><div style="margin-top:8px;display:flex;gap:8px;align-items:center"><div style="padding:10px;border-radius:8px;background:rgba(22,163,74,0.08);font-weight:700">Present: ${presentDays}</div><div style="padding:10px;border-radius:8px;background:rgba(239,68,68,0.06);font-weight:700">Absent: ${totalDays-presentDays}</div></div></div><div style="width:140px;text-align:center"><div style="font-size:28px;font-weight:900">${pct}</div><div class="muted">Overall percentage</div></div></div><div style="margin-top:12px"><div style="font-weight:700;margin-bottom:6px">Recent days</div><div style="display:flex;gap:8px;flex-wrap:wrap">${renderRecentDays(studentId)}</div></div>`; modal.appendChild(dialog); modalRoot.innerHTML=''; modalRoot.appendChild(modal); modalRoot.style.display='block'; document.getElementById('closeModal').addEventListener('click', ()=>{ modalRoot.style.display='none'; modalRoot.innerHTML=''; }); }
+function renderRecentDays(studentId){ const days = Object.keys(state.attendance).sort((a,b)=>b.localeCompare(a)).slice(0,10); return days.map(d=>{ const v = state.attendance[d] && state.attendance[d].hasOwnProperty(studentId) ? (state.attendance[d][studentId] ? '✅' : '❌') : '—'; return `<div style="padding:8px;border-radius:8px;background:rgba(255,255,255,0.02);min-width:86px;text-align:center">${d}<br/><span style="font-size:16px">${v}</span></div>` }).join(''); }
+
+/* import/export */
+function download(content, filename){ const a=document.createElement('a'); a.href='data:application/json;charset=utf-8,'+encodeURIComponent(content); a.download=filename; document.body.appendChild(a); a.click(); a.remove(); }
+function promptImport(){ const txt = prompt('Paste exported JSON here to import (this will replace existing data).'); if(!txt) return; try{ const data=JSON.parse(txt); if(data.students && data.attendance){ state=data; saveState(); renderAll(); alert('Import successful'); } else alert('Invalid data format'); }catch(e){ alert('Invalid JSON'); } }
+
+function toggleTheme(){ const root=document.documentElement; if(root.getAttribute('data-theme')==='light'){ root.removeAttribute('data-theme'); } else { root.setAttribute('data-theme','light'); } }
+
+// expose for debugging
+window.__attendance = { state, saveState, loadState, renderAll, showStudentModal };
+
+</script>
+</body>
+</html>
